@@ -6,8 +6,16 @@ Created on Mon Sep  8 19:52:48 2014
 """
 
 import ctypes
-xi=ctypes.cdll.LoadLibrary('libm3api.so')     
+import os
 
+if os.name == 'posix' or os.name == 'mac':
+    try:
+        xi=ctypes.cdll.LoadLibrary('libm3api.so') 
+    except:
+        xi=ctypes.cdll.LoadLibrary('/usr/lib/libm3api.so')
+elif os.name == 'nt':
+    xi=ctypes.cdll.LoadLibrary('m3api.dll')    
+    
 def NewDeviceHandle():
     xiH=ctypes.pointer(ctypes.c_void_p(0))
     return xiH
@@ -40,7 +48,8 @@ def GetImage(xiH, timeout, image):
     assert isinstance(timeout,ctypes.c_uint)         
     stat = xi.xiGetImage(xiH.contents,timeout, image)
 #    print('xiApi error code: %i')%(stat)
-    raw = (ctypes.c_uint8*image.contents.width*image.contents.height).from_address(image.contents.bp) 
+    raw = (ctypes.c_uint8*image.contents.width*image.contents.height).from_address(image.contents.bp)
+    
     assert stat == 0
     return raw    
     
@@ -61,12 +70,22 @@ def SetParamInt(xiH, value, param):
         print
         value=int(value)
     if isinstance(value,int):
-        value=ctypes.c_uint32(value)
+        value=ctypes.c_uint(value)
     assert type(value) is ctypes.c_uint,'Invalid data type: %s, int required'%((str(type(value))[7:])[:-2])
     stat = xi.xiSetParamInt(xiH.contents, param , value)
     print('xiApi error code: %i')%(stat)
     assert stat == 0
     return None
+    
+def GetParamInt(xiH, param):
+    print
+    print('Getting %s...')%(param)
+    value=ctypes.c_uint()
+    assert type(value) is ctypes.c_uint,'Invalid data type: %s, int required'%((str(type(value))[7:])[:-2])
+    stat = xi.xiGetParamInt(xiH.contents, param, ctypes.byref(value))
+    print('xiApi error code: %i')%(stat)
+    assert stat == 0
+    return int(value.value)
     
 def SetParamFloat(xiH, value, param):
     print
